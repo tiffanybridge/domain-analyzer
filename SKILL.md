@@ -29,8 +29,10 @@ Given a CSV of canceled or churned services, this skill checks each domain to fi
 ## How It Works (Internal - for Claude)
 
 ### Scripts (already built, reuse these — do NOT rewrite them)
-- **Pass 1:** `outputs/analyses/domain_lookup.py` — DNS resolution + HTTP fingerprinting via headers/HTML
-- **Pass 2:** `outputs/analyses/domain_lookup_wappalyzer_pass.py` — Wappalyzer signatures for BUILTWITH_FOLLOWUP=yes rows
+- **Pass 1:** `.claude/skills/domain-analysis/domain_lookup.py` — DNS resolution + HTTP fingerprinting via headers/HTML
+- **Pass 2:** `.claude/skills/domain-analysis/domain_lookup_wappalyzer_pass.py` — Wappalyzer signatures for BUILTWITH_FOLLOWUP=yes rows
+
+Standalone users (running outside PM-OS) can run the scripts directly from the repo directory: `python3 domain_lookup.py --input ...`
 
 ### Step 1: Locate the input file
 - If the user passed a path, use it directly
@@ -53,27 +55,32 @@ If missing:
 pip install requests ipwhois
 ```
 
-### Step 4: Run Pass 1
+### Step 4: Ask about staging domain suffixes
+Ask the user: "Do you have any internal staging domain suffixes to skip? These are temp domains that belong to your company, not customers — for example, `.nxcli.net,.nxcli.io` for Nexcess users. Leave blank to skip none."
+
+- If they provide suffixes, pass them as `--skip-suffix "[their answer]"` in the next step
+- If blank, omit the flag entirely
+
+### Step 5: Run Pass 1
 ```bash
-python3 outputs/analyses/domain_lookup.py \
+python3 .claude/skills/domain-analysis/domain_lookup.py \
   --input "[input_path]" \
-  --output "[output_path]"
+  --output "[output_path]" \
+  [--skip-suffix ".your-suffix.com,.another-suffix.com"]
 ```
 
 **Expected input CSV columns** (at minimum one of these must be present and non-blank):
 - `PRIMARY_DOMAIN`, `SITE_DOMAIN`, or `CLIENT_DOMAIN`
 
-Domains ending in `.nxcli.net` or `.nxcli.io` are automatically skipped (Nexcess staging).
-
-### Step 5: Run Pass 2 (Wappalyzer)
+### Step 6: Run Pass 2 (Wappalyzer)
 ```bash
-python3 outputs/analyses/domain_lookup_wappalyzer_pass.py \
+python3 .claude/skills/domain-analysis/domain_lookup_wappalyzer_pass.py \
   --file "[output_path]"
 ```
 
-The Wappalyzer tech definitions are cached locally in `outputs/analyses/.wappalyzer_cache.json` after the first run. Delete that file to force a refresh.
+The Wappalyzer tech definitions are cached locally in `.claude/skills/domain-analysis/.wappalyzer_cache.json` after the first run. Delete that file to force a refresh.
 
-### Step 6: Print summary
+### Step 7: Print summary
 Show the platform breakdown from the output CSV:
 ```python
 import csv
@@ -100,13 +107,13 @@ rows = list(csv.DictReader(open(output_path)))
 
 ## Interpreting Results
 
-**NO_REAL_DOMAIN** — Row had only a temp/staging domain (nxcli.net/io) or blank. No customer domain to check.
+**NO_REAL_DOMAIN** — Row had only a staging/temp domain (from the skip list) or was blank. No customer domain to check.
 
 **DNS dark / blank PLATFORM** — Domain doesn't resolve. Site is gone or domain expired.
 
 **BUILTWITH_FOLLOWUP=yes** — Site is live but platform couldn't be fingerprinted. Likely a custom build or behind a WAF. BuiltWith paid API ($295/mo) is the next option for these.
 
-**Still on Magento** — Customer left Nexcess but stayed on Magento. Different retention problem than migration. Worth flagging to the Tiger Team.
+**Still on original platform** — Customer migrated hosting but kept the same platform. A different retention problem than platform migration — worth segmenting separately.
 
 ---
 
@@ -114,5 +121,5 @@ rows = list(csv.DictReader(open(output_path)))
 
 - ~10-15% of live sites will remain Unknown (custom builds, WAFs, JS-only rendering)
 - Hosting detection is less reliable when a site is behind Cloudflare (hides origin)
-- Does not distinguish "migrated to Shopify" from "was always on Shopify alongside Nexcess"
+- Does not distinguish "migrated to Shopify" from "was always on Shopify alongside your service"
 - Wappalyzer cache can become stale — delete `.wappalyzer_cache.json` to refresh signatures
