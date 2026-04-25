@@ -131,6 +131,14 @@ HOSTING_RULES: list[tuple[str, list[tuple[str, str]]]] = [
     ("SiteGround",         [("rdns", "siteground.net"), ("rdns", "sgcpanel")]),
     ("GoDaddy",            [("rdns", "secureserver.net")]),
     ("Cloudflare",         [("header_key", "cf-ray"), ("header_val", "cloudflare")]),
+    ("Webscale",          [("rdns", "webscale.com"), ("rdns", "webscaledns.com"),
+                           ("header_key", "x-webscale-request-id"), ("header_key", "x-webscale-cache"),
+                           ("html", "cdn.webscale.com")]),
+    ("JetRails",          [("rdns", "jetrails.com"), ("header_key", "x-jetrails")]),
+    ("Platform.sh",       [("rdns", "platform.sh"), ("rdns", "platformsh.site"),
+                           ("header_key", "x-platform-cache"), ("header_key", "x-platform-cluster"),
+                           ("header_key", "x-platform-branch")]),
+    ("Upsun",             [("rdns", "upsun.com"), ("header_key", "x-upsun-request-id")]),
     ("AWS",                [("rdns", "amazonaws.com"), ("rdns", "awsglobalaccelerator.com")]),
     ("Google Cloud",       [("rdns", "1e100.net")]),
     ("Fastly",             [("rdns", "fastly.net"), ("header_key", "x-fastly-request-id")]),
@@ -150,6 +158,8 @@ ASN_HOSTING_MAP = {
     "fastly":      "Fastly",
     "netlify":     "Netlify",
     "vercel":      "Vercel",
+    "webscale":    "Webscale",
+    "jetrails":    "JetRails",
 }
 
 

@@ -31,6 +31,7 @@ Given a CSV of canceled or churned services, this skill checks each domain to fi
 ### Scripts (already built, reuse these — do NOT rewrite them)
 - **Pass 1:** `.claude/skills/domain-analysis/domain_lookup.py` — DNS resolution + HTTP fingerprinting via headers/HTML
 - **Pass 2:** `.claude/skills/domain-analysis/domain_lookup_wappalyzer_pass.py` — Wappalyzer signatures for BUILTWITH_FOLLOWUP=yes rows
+- **Pass 3 (optional):** `.claude/skills/domain-analysis/domain_lookup_deepdive_pass.py` — Origin detection for Cloudflare-proxied rows via unproxied subdomains (cpanel., ftp., dev., staging.) and Certificate Transparency logs. DKIM records are collected as raw signals but intentionally excluded from provider classification (email infrastructure, not web hosting). Run when you need to identify managed providers (Webscale, JetRails, Platform.sh, Upsun, etc.) hidden behind Cloudflare. Usage: `python3 domain_lookup_deepdive_pass.py --file results.csv --platform Magento`
 
 Standalone users (running outside PM-OS) can run the scripts directly from the repo directory: `python3 domain_lookup.py --input ...`
 
